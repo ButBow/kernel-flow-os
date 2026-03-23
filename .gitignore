@@ -1,0 +1,61 @@
+# ============================================================
+# SENSITIVE DATA — NEVER COMMIT
+# ============================================================
+
+# Notion exports (contains real client data, contact info, financials)
+Kernel_Home_Export_Notion/
+
+# Data exports with real client/financial data
+_Data_Exports/
+
+# Any .env files or secrets
+.env
+.env.*
+*.env
+secrets.*
+Secrets.*
+Connections.txt
+
+# Credentials, keys, tokens
+*.key
+*.pem
+*.p12
+credentials.json
+token.json
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor cruft
+.vscode/settings.json
+.cursor/
+*.suo
+*.user
+
+# Node / build artifacts (Lovable will add these)
+node_modules/
+dist/
+.next/
+.nuxt/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temp files
+*.tmp
+*.temp
+~$*
+
+# ============================================================
+# WHAT IS SAFE TO COMMIT
+# ============================================================
+# - README.md
+# - CLAUDE.md
+# - _CLAUDE/ (orchestration files — no real data)
+# - _Lovable_Prompt/ (specs only — no real data)
+# - _Assets/ (logos, brand files — check before adding)
+# - src/ (app source code)
+# - All config files (package.json, tsconfig, etc.)
