@@ -1,551 +1,225 @@
-# NEXT TASK FOR LOVABLE
+# NEXT TASK FOR LOVABLE — TASK-002
 
-**Orchestrated by:** Claude (AI Orchestrator for Kernel Flow OS)
-**Task:** TASK-001 — Initial App Build (Foundation)
+**Orchestrated by:** Claude (AI Orchestrator)
+**Task:** TASK-002 — Full CRUD + Kanban + Charts
 **Date:** 2026-03-23
 
----
-
-> READ CLAUDE.md FIRST before starting. It contains all architectural rules.
-> After finishing, write `_CLAUDE/REPORTS/REPORT-001.md` and commit it.
+> After finishing, write `_CLAUDE/REPORTS/REPORT-002.md` and commit it.
+> See `_CLAUDE/TASKS/TASK-002-full-crud.md` for the complete detailed spec.
 
 ---
 
-## YOUR JOB RIGHT NOW
+## OVERVIEW
 
-Build the foundation of "Kernel Flow OS" — a **Personal Operating System** for Floris Kern / Kernel Flow GmbH. This is more than a dashboard: it's a unified hub for business management, local tool launching, workspace switching, and Claude Code integration.
-
-This is an internal tool, NOT the public website. Full spec: `_Lovable_Prompt/KERNEL_FLOW_OS_PROMPT.md`
-
-**IMPORTANT: There is a local Python service running on http://localhost:8421 (Kernel Launcher Service).** The web app must talk to this service for local operations (launching tools, checking status, browsing files, launching Claude Code). Details are in CLAUDE.md under "LAUNCHER SERVICE API".
+All pages currently only READ data. This task adds **create, edit, delete** to every business section, plus Kanban views and finance charts. Do them in this priority order.
 
 ---
 
-## STEP 1 — Project Setup
+## STEP 0 — Shared Infrastructure
 
-Create a React + TypeScript + Tailwind CSS app with:
-- Shadcn/ui (dark theme, install with `npx shadcn@latest init`)
-- React Router v6
-- Sonner (toasts)
-- Recharts
-- Lucide React
-
-Connect to Supabase via Lovable's built-in Supabase integration.
-
----
-
-## STEP 2 — Design System
-
-Add to tailwind.config.ts:
-```js
-colors: {
-  kernel: {
-    bg: '#0A0A0A',
-    surface: '#111111',
-    surface2: '#1A1A1A',
-    primary: '#2563EB',
-    accent: '#7C3AED',
-    success: '#10B981',
-    warning: '#F59E0B',
-    danger: '#EF4444',
-    text: '#F8FAFC',
-    muted: '#94A3B8',
-  }
-}
-```
-
-Always add `dark` class to `<html>` element. Dark mode only.
-Font: Inter.
-
----
-
-## STEP 3 — Supabase Schema
-
-Run this SQL in your Supabase project (SQL Editor):
-
-```sql
-create table clients (
-  id uuid default gen_random_uuid() primary key,
-  name text not null,
-  client_id text unique,
-  status text default 'Potenziell',
-  branche text,
-  kontaktperson text,
-  email text,
-  telefon text,
-  adresse text,
-  website text,
-  tier text,
-  letzter_kontakt date,
-  notizen text,
-  ordner_link text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
-create table projects (
-  id uuid default gen_random_uuid() primary key,
-  titel text not null,
-  auftrags_nr text unique,
-  kunde_id uuid references clients(id) on delete set null,
-  status text default 'Anfrage',
-  typ text,
-  prioritaet text default 'Standard',
-  startdatum date,
-  deadline date,
-  budget numeric,
-  stunden_geschaetzt numeric default 0,
-  stunden_geloggt numeric default 0,
-  beschreibung text,
-  ordner_link text,
-  notizen text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
-create table project_deliverables (
-  id uuid default gen_random_uuid() primary key,
-  project_id uuid references projects(id) on delete cascade,
-  text text not null,
-  completed boolean default false,
-  sort_order integer default 0
-);
-
-create table time_entries (
-  id uuid default gen_random_uuid() primary key,
-  project_id uuid references projects(id) on delete cascade,
-  datum date not null,
-  stunden numeric not null,
-  notiz text,
-  created_at timestamptz default now()
-);
-
-create table leads (
-  id uuid default gen_random_uuid() primary key,
-  name text not null,
-  anfrageart text,
-  quelle text,
-  budget_schaetzung numeric,
-  status text default 'Neu',
-  eingangsdatum date default current_date,
-  naechste_aktion text,
-  naechste_aktion_datum date,
-  email text,
-  telefon text,
-  notizen text,
-  created_at timestamptz default now()
-);
-
-create table services (
-  id uuid default gen_random_uuid() primary key,
-  name text not null,
-  service_id text unique,
-  kategorie text,
-  beschreibung text,
-  preis_von numeric,
-  preis_bis numeric,
-  aufwand_stunden numeric,
-  vor_ort_minuten integer,
-  nachbearbeitung_stunden numeric,
-  lieferumfang text,
-  status text default 'Entwurf',
-  notizen text,
-  created_at timestamptz default now()
-);
-
-create table content_items (
-  id uuid default gen_random_uuid() primary key,
-  titel text not null,
-  plattform text[],
-  format text,
-  status text default 'Idee',
-  geplantes_datum date,
-  fuer_kunde_id uuid references clients(id) on delete set null,
-  fuer_eigene boolean default true,
-  hook text,
-  script text,
-  hashtags text,
-  datei_link text,
-  performance_score integer,
-  tags text[],
-  created_at timestamptz default now()
-);
-
-create table invoices (
-  id uuid default gen_random_uuid() primary key,
-  rechnungs_nr text unique,
-  kunde_id uuid references clients(id) on delete set null,
-  projekt_id uuid references projects(id) on delete set null,
-  betrag numeric not null,
-  mwst_prozent numeric default 8.1,
-  status text default 'Entwurf',
-  ausstellungsdatum date default current_date,
-  faelligkeitsdatum date,
-  beschreibung text,
-  notizen text,
-  created_at timestamptz default now()
-);
-
-create table open_loops (
-  id uuid default gen_random_uuid() primary key,
-  loop text not null,
-  status text default 'Offen',
-  leverage text default 'Mittel',
-  deadline date,
-  kunde_id uuid references clients(id) on delete set null,
-  projekt_id uuid references projects(id) on delete set null,
-  quelle text,
-  owner text default 'Ich',
-  beteiligte text,
-  naechste_aktion text,
-  notizen text,
-  created_at timestamptz default now()
-);
-
-create table prompts (
-  id uuid default gen_random_uuid() primary key,
-  titel text not null,
-  kategorie text,
-  prompt_text text not null,
-  tags text[],
-  favorit boolean default false,
-  zuletzt_genutzt date,
-  notizen text,
-  created_at timestamptz default now()
-);
-
-create table partner (
-  id uuid default gen_random_uuid() primary key,
-  name text not null,
-  typ text,
-  kontaktperson text,
-  email text,
-  telefon text,
-  services text,
-  status text default 'Potenziell',
-  revenue_share numeric,
-  notizen text,
-  website text,
-  created_at timestamptz default now()
-);
-
-create table roadmap (
-  id uuid default gen_random_uuid() primary key,
-  ziel text not null,
-  phase text,
-  kategorie text,
-  status text default 'Geplant',
-  zieldatum date,
-  erfolgsmetrik text,
-  beschreibung text,
-  prioritaet text default 'Mittel',
-  created_at timestamptz default now()
-);
-
-create table activity_log (
-  id uuid default gen_random_uuid() primary key,
-  action text not null,
-  entity_type text not null,
-  entity_name text,
-  created_at timestamptz default now()
-);
-```
-
-Disable RLS on all tables (this is a single-user MVP, no auth needed).
-
----
-
-## STEP 4 — Seed Data
-
-Insert this data via Supabase SQL editor or via a seed function in the app:
-
-```sql
--- CLIENTS
-insert into clients (name, client_id, status, branche, kontaktperson, tier) values
-  ('GLP', 'CL-001', 'Aktiv', 'Politik', 'Tobias Meier Kern', 'Standard'),
-  ('Sportanlagen AG Wallisellen', 'CL-002', 'Potenziell', 'Sport', 'Oliver Galliker', 'Standard'),
-  ('Gaphiland', 'CL-003', 'Aktiv', 'Design', null, 'Standard'),
-  ('SIUC', 'CL-004', 'Potenziell', 'Sonstiges', 'Marianne', 'One-off'),
-  ('Klang.Vibes', 'CL-005', 'Potenziell', 'Musik/Events', 'Sandra Schöb-Brunner', 'One-off'),
-  ('HUGG', 'CL-006', 'Potenziell', 'Sonstiges', null, 'One-off');
-
--- SERVICES
-insert into services (name, service_id, kategorie, preis_von, aufwand_stunden, vor_ort_minuten, nachbearbeitung_stunden, status, beschreibung) values
-  ('Social Media Video 15 Sek. – Light Packet', 'S-001', 'Video', 300, 3, 30, 1, 'Aktiv', '15 Sek Social Media Video – Perfekt für schnelle, knackige Content-Snippets. Inkl. 30 Min Dreh, 1h Schnitt, 1 Korrekturschleife.'),
-  ('Social Media Video 30 Sek. – Medium Packet', 'S-002', 'Video', 425, 4, 45, 1.5, 'Aktiv', '30 Sek Social Media Video – Ideal für ausführlichere Stories. Inkl. 45 Min Dreh, 1.5h Schnitt, 2 Korrekturschleifen.'),
-  ('Social Media Video 45 Sek. – Large Packet', 'S-003', 'Video', 540, 5, 60, 2, 'Aktiv', '45 Sek Social Media Video – Für umfangreiche Content-Pieces. Inkl. 60 Min Dreh, 2h Schnitt, 2 Korrekturschleifen.'),
-  ('Social Media Video 60 Sek. – Premium Packet', 'S-004', 'Video', 650, 6, 75, 2.5, 'Aktiv', '60 Sek Social Media Video – Premium-Qualität. Inkl. 75 Min Dreh, 2.5h Schnitt, 3 Korrekturschleifen.'),
-  ('Event Begleitung – Bild und Video', 'S-005', 'Event', 800, 8, 240, 4, 'Aktiv', 'Professionelle Event-Begleitung mit Foto & Video.'),
-  ('Sponsoren Suche, Vermittlung, Verhandlung', 'S-006', 'Consulting', null, null, null, null, 'Aktiv', null),
-  ('IT Support', 'S-007', 'IT-Support', null, null, null, null, 'Entwurf', null),
-  ('AI Crashkurs (GPT richtig im Alltag einsetzen)', 'S-008', 'AI-Automation', null, null, null, null, 'Entwurf', null),
-  ('AI Workflows', 'S-009', 'AI-Automation', null, null, null, null, 'Entwurf', null),
-  ('Webseite Unterhalt', 'S-010', 'Sonstiges', null, null, null, null, 'Entwurf', null);
-
--- PARTNER
-insert into partner (name, email, telefon, status) values
-  ('Fasson', 'vb@fasoon.ch', '+41 71 523 12 57', 'Potenziell');
-
--- LEADS
-insert into leads (name, anfrageart, quelle, budget_schaetzung, status, eingangsdatum, notizen) values
-  ('dfddf (test)', 'Projektanfrage', 'Website', 1000, 'Neu', '2026-01-06', 'Social Media Shortform Video interest');
-
--- CONTENT
-insert into content_items (titel, plattform, format, status, fuer_eigene, script) values
-  ('Introduction Video', ARRAY['Instagram', 'TikTok', 'YouTube'], 'Short', 'Idee', true, 'Vorstellung von Floris und Kernel Flow GmbH');
-```
-
-For projects, insert after getting client IDs from the clients table.
-
----
-
-## STEP 5 — App Layout Shell
-
-Create `src/components/layout/Layout.tsx` — the persistent shell:
-- Left sidebar (240px, fixed)
-- Main content area (flex-1, scrollable)
-- Sidebar contains: logo, nav items, bottom company info
-
-Create `src/components/layout/Sidebar.tsx`:
-- **Two sections in sidebar, separated by a divider line:**
-  - Top: "Business" label, then: Dashboard, Kunden, Aufträge, Pipeline, Services, Content, Finanzen, Open Loops, Prompts, Partner, Roadmap
-  - Bottom: "System" label, then: Tools Hub, Claude Code, Workspaces, Settings
-- Nav items with icons (Lucide), label, active state
-- Active = bg surface2 + left border primary + text white
-- Inactive = text muted, hover bg surface2
-- Bottom: "Kernel Flow GmbH" + "v0.1"
-
----
-
-## STEP 6 — Dashboard Page
-
-Build `src/pages/Dashboard.tsx` with:
-
-**Top row — 4 stat cards:**
-- Revenue this month: CHF 0 / CHF 3.000 goal (progress bar showing 0%)
-- Active projects: count from DB (should be 2 — KF-001 In Arbeit, KF-002,003,004 are Anfrage)
-- Open leads: count from leads table
-- Open loops: count (0 for now)
-
-**Quick Actions bar:**
-- 5 buttons: [+ Auftrag] [+ Kunde] [+ Lead] [+ Loop] [+ Rechnung]
-- Clicking them opens a basic create modal (can be simple for now)
-
-**Active Projects list:**
-- Show projects with status not 'Abgeschlossen', max 5
-- Each row: Auftrags-Nr badge, Titel, Kunde name, Status badge (color coded), Deadline (if set, show days remaining)
-
-**Recent Activity:**
-- Show last 10 entries from activity_log
-- If empty (no activity yet): show "Keine Aktivität – starte, indem du einen Kunden oder Auftrag erstellst."
-
----
-
-## STEP 7 — Stub Pages
-
-For each section, create a minimal page:
-```tsx
-// Example: src/pages/Kunden.tsx
-export default function Kunden() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-kernel-text">Kunden</h1>
-      <p className="text-kernel-muted mt-2">Wird in TASK-002 gebaut.</p>
-    </div>
-  )
-}
-```
-Do this for: Kunden, Aufträge, Pipeline, Services, Content, Finanzen, Open Loops, Prompts, Partner, Roadmap, Settings, ToolsHub, ClaudeCodeHub, Workspaces.
-
----
-
-## STEP 7b — Tools Hub Page (Basic but Functional)
-
-**Route:** `/tools`
-
-This is NOT a stub — build this page with real functionality.
-
-The Tools Hub talks to the **Kernel Launcher Service** at `http://localhost:8421`.
-
-Create a helper `src/services/launcher.ts`:
+### Activity Logger
+Create `src/services/activityLog.ts`:
 ```ts
-const LAUNCHER_URL = 'http://localhost:8421'
+import { supabase } from "@/integrations/supabase/client"
 
-export async function getModules() {
-  const res = await fetch(`${LAUNCHER_URL}/modules`)
-  return res.json()
-}
-
-export async function getModulesStatus() {
-  const res = await fetch(`${LAUNCHER_URL}/modules/status`)
-  return res.json()
-}
-
-export async function launchTool(toolId: string) {
-  const res = await fetch(`${LAUNCHER_URL}/launch/${toolId}`, { method: 'POST' })
-  return res.json()
-}
-
-export async function getSystemInfo() {
-  const res = await fetch(`${LAUNCHER_URL}/system/info`)
-  return res.json()
-}
-
-export async function launcherHealthCheck() {
-  try {
-    const res = await fetch(`${LAUNCHER_URL}/health`)
-    return res.ok
-  } catch {
-    return false
-  }
+export async function logActivity(action: string, entityType: string, entityName: string) {
+  await supabase.from("activity_log").insert({ action, entity_type: entityType, entity_name: entityName })
 }
 ```
+Call this after EVERY create, update, delete across all pages.
 
-**ToolsHub page layout:**
+### Delete Confirmation
+Use Shadcn `AlertDialog` with "Bist du sicher?" — red destructive confirm button. Reuse across all sections.
 
-1. **Header bar:** "Tools Hub" title + Launcher status indicator:
-   - Green dot + "Launcher Connected" if `/health` returns ok
-   - Red dot + "Launcher Offline — run START.bat" if fetch fails
+### Status Badge Colors (use everywhere consistently)
+- Green: Aktiv, Bezahlt, Erreicht, Gewonnen, Abgeschlossen, Fertig, Veröffentlicht, Erledigt
+- Blue: In Arbeit, In Progress, In Produktion
+- Amber: Anfrage, Wartet, Potenziell, Review, Geplant, Entwurf, Neu, Kontaktiert
+- Red: Überfällig, Verloren
+- Gray: Inaktiv, Archiviert
 
-2. **Tool Cards Grid** (2-3 columns):
-   - Fetch tools from `GET /modules` → tools array
-   - Each card shows:
-     - Icon (from Lucide, mapped by tool's `icon` field)
-     - Tool name + description
-     - Status badge: 🟢 Running / 🔴 Stopped / ⚪ Unknown (from `/modules/status`)
-     - [Launch] button → calls `POST /launch/{tool_id}`
-     - If tool has `webUrl` and `embeddable: true`: [Open in Panel] button → navigates to iFrame view
-   - Category grouping (dev / ai / media / productivity)
-
-3. **Embedded Panel** (for web-based tools):
-   - When user clicks "Open in Panel" on an embeddable tool (ClaudeCodeManager, LinkHoarder)
-   - Shows a full-width iFrame below the cards grid loading the tool's `webUrl`
-   - Close button to dismiss the iFrame panel
-
-4. **System Info** (small section at bottom):
-   - CPU usage bar + RAM usage bar (from `GET /system/info`)
-   - Auto-refresh every 10 seconds
-
-Handle the "launcher offline" case gracefully:
-- If `localhost:8421` is unreachable, show ALL tool cards in "Unknown" status
-- Show a prominent banner: "Kernel Launcher Service is offline. Run START.bat to connect local tools."
-- The rest of the app (business sections) works fine without the launcher
+### Date/Currency Format
+- Dates: `toLocaleDateString("de-CH")` → DD.MM.YYYY
+- Currency: `CHF ${amount.toFixed(2)}`
 
 ---
 
-## STEP 7c — Claude Code Hub Page (Basic but Functional)
+## STEP 1 — Kunden (CRM)
 
-**Route:** `/claude-code`
+Update `KundenPage.tsx`:
 
-Create `src/services/claudeCode.ts`:
-```ts
-const LAUNCHER_URL = 'http://localhost:8421'
+**"+ Neuer Kunde" button** opens a Shadcn Dialog modal with fields:
+- Name (text, required)
+- Status (select: Aktiv / Potenziell / Inaktiv / Archiviert)
+- Branche (select: Video / AI / Politik / Sport / Design / Gastronomie / IT / Musik/Events / Sonstiges)
+- Kontaktperson (text)
+- Email (email)
+- Telefon (text)
+- Adresse (textarea)
+- Website (url)
+- Tier (select: Premium / Standard / One-off)
+- Notizen (textarea)
+- Ordner Link (text)
 
-export async function getClaudeProjects() {
-  const res = await fetch(`${LAUNCHER_URL}/claude-code/projects`)
-  return res.json()
-}
+On save: auto-generate `client_id` as "CL-" + next number (query max existing). Insert into Supabase. Log activity. Toast success. Refetch list.
 
-export async function getQuickPaths() {
-  const res = await fetch(`${LAUNCHER_URL}/claude-code/quick-paths`)
-  return res.json()
-}
+**Row actions:** Edit button (opens same modal pre-filled), Delete button (confirmation dialog).
 
-export async function launchClaudeCode(path: string, model?: string) {
-  const res = await fetch(`${LAUNCHER_URL}/claude-code/launch`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path, model })
-  })
-  return res.json()
-}
-
-export async function browseDirectory(path: string) {
-  const res = await fetch(`${LAUNCHER_URL}/files/browse?path=${encodeURIComponent(path)}`)
-  return res.json()
-}
-```
-
-**ClaudeCode Hub page layout:**
-
-1. **Quick Launch** (top section):
-   - Row of buttons for bookmarked paths (from `/claude-code/quick-paths`)
-   - Each button: path label + "Open Claude Code" action
-   - Clicking calls `POST /claude-code/launch` with that path
-   - Toast notification: "Claude Code launched in [path]"
-
-2. **Directory Browser** (middle):
-   - Starts at `C:\Users\flori`
-   - Shows folder list (from `GET /files/browse?path=...`)
-   - Each folder: name, click to navigate deeper, "has CLAUDE.md" indicator (dot)
-   - Breadcrumb navigation at top
-   - "Open Claude Code Here" button per folder row
-
-3. **Recent Projects** (bottom section):
-   - Table from `GET /claude-code/projects`
-   - Columns: Project Name, Path, Sessions count
-   - "Open" button per row → launches CC in that path
-   - Sorted by name
-
-Handle launcher offline: show "Launcher offline" banner, quick-launch buttons disabled.
+**Click row → Detail Page** at `/kunden/:id`:
+- All fields shown, edit button to open modal
+- Section: "Aufträge" — query `projects` where `kunde_id` matches
+- Section: "Rechnungen" — query `invoices` where `kunde_id` matches, show total
+- Section: "Open Loops" — query `open_loops` where `kunde_id` matches
+- Back button
 
 ---
 
-## STEP 7d — Workspaces Page (Stub with Structure)
+## STEP 2 — Aufträge (Kanban + CRUD)
 
-**Route:** `/workspaces`
+Rewrite `AuftraegePage.tsx`:
 
-This can be simpler for now:
-- Read workspace configs from `GET /modules` → `workspaces` array
-- Show workspace cards:
-  - Name, description, color indicator, icon
-  - List of tools that will launch
-  - [Activate] button → calls `POST /workspace/activate` with workspace_id
-  - Toast: "Workspace [name] activated — launching X tools"
+**Default: Kanban board**
+- 5 columns: Anfrage | In Arbeit | Review | Abgeliefert | Abgeschlossen
+- Each card shows: Auftrags-Nr badge, Titel, Kunde name, Deadline (red if past due), Priorität colored dot (Hoch=red, Standard=blue, Niedrig=gray)
+- Click card → detail page
+- **Status change:** Dropdown on each card OR drag-and-drop (your choice — dropdown is simpler and reliable)
+- Toggle button to switch to List view (table)
 
----
+**"+ Neuer Auftrag" modal fields:**
+- Titel (required)
+- Kunde (select dropdown from clients table)
+- Status (select: Anfrage / In Arbeit / Review / Abgeliefert / Abgeschlossen)
+- Typ (select: Video / Foto / Automation / Consulting / Website / Event / Sonstiges)
+- Priorität (select: Hoch / Standard / Niedrig)
+- Startdatum, Deadline (date pickers)
+- Budget CHF (number)
+- Stunden Geschätzt (number)
+- Beschreibung, Ordner Link, Notizen (textareas)
 
-## STEP 8 — Report
+Auto-generate `auftrags_nr`: "KF-" + next number.
 
-After you're done, create `_CLAUDE/REPORTS/REPORT-001.md` using this template:
-
-```markdown
-# REPORT-001 — Initial App Build
-
-**Date:** [today]
-**Task:** TASK-001
-**Status:** COMPLETE / PARTIAL / BLOCKED
-
-## What I Built
-[bullet list]
-
-## Files Changed
-[list]
-
-## Decisions I Made
-[any choices you made independently + WHY]
-
-## Deviations from Task
-[anything different from spec]
-
-## What Still Needs Work
-[anything skipped or incomplete]
-
-## Questions for Claude
-[blockers or unclear things]
-
-## How to Test
-[what to click to verify it works]
-```
-
-Commit this file along with all code.
+**Detail Page `/auftraege/:id`:**
+- All fields editable
+- **Deliverables checklist:** Add new item (text input + add button), toggle checkbox, delete item. Uses `project_deliverables` table.
+- **Time entries:** Add entry (date + hours + note), shows list + total hours vs estimated
+- Linked invoices, linked open loops
 
 ---
 
-## IMPORTANT
+## STEP 3 — Pipeline (Leads Kanban)
 
-- Read `CLAUDE.md` for architectural rules
-- All data goes to Supabase, not localStorage
-- Dark mode only (add `dark` class to html permanently)
-- Commit message: `feat(TASK-001): initial app foundation + dashboard`
-- Push to the GitHub repo
+Rewrite `PipelinePage.tsx`:
+
+**Kanban columns:** Neu | Kontaktiert | Discovery Call | Angebot Gesendet | Gewonnen | Verloren
+
+Cards: Name/Firma, Quelle badge, Budget CHF, Nächste Aktion
+
+**"+ Neuer Lead" modal:**
+- Name/Firma (required)
+- Anfrageart (select: Projektanfrage / Monatsabo / Consulting / Sonstiges)
+- Quelle (select: Instagram / Referral / Website / Kalt / Fiverr / Sonstiges)
+- Budget CHF (number)
+- Status (select from columns)
+- Eingangsdatum (date, default today)
+- Nächste Aktion (text), Nächste Aktion Datum (date)
+- Email, Telefon, Notizen
+
+---
+
+## STEP 4 — Finanzen (Charts + Invoice CRUD)
+
+Rewrite `FinanzenPage.tsx`:
+
+**Top: Dashboard widgets**
+- 4 stat cards: Revenue this month, Outstanding, Overdue (red), Revenue this year
+- Monthly revenue **bar chart** (Recharts `BarChart`) — last 6 months, sum of "Bezahlt" invoices per month
+- Revenue by client **pie chart** (Recharts `PieChart`) — top 5 clients
+- 3 progress bars for revenue goals: Tier 1 CHF 3.000, Tier 2 CHF 5.000, Tier 3 CHF 7.000
+
+**Below: Invoice table + CRUD**
+- Columns: Rechnungs-Nr, Kunde, Betrag, MwSt, Gesamt, Status, Fällig
+- "Bezahlt" rows in green, "Überfällig" in red
+- Create/Edit modal:
+  - Kunde (select), Auftrag (select, optional), Betrag CHF, MwSt % (default 8.1)
+  - Gesamt shown as read-only calculated field
+  - Status, Ausstellungsdatum, Fälligkeitsdatum (+30 days default)
+  - Beschreibung, Notizen
+  - Auto-generate `rechnungs_nr`: "RE-2026-" + next number
+
+---
+
+## STEP 5 — Open Loops (CRUD + Age Highlighting)
+
+Rewrite `OpenLoopsPage.tsx`:
+
+**Default view:** Only status "Offen", sorted by Leverage (Hoch first) then age (oldest first)
+
+**Age highlighting on each row:**
+- Created > 7 days ago: amber left border (`border-l-4 border-warning`)
+- Created > 14 days ago: red left border + red dot (`border-l-4 border-destructive`)
+
+**Filter toggles:** Offen | Wartet | Alle
+
+**Create/Edit modal:**
+- Loop text (required — what needs to happen)
+- Status (select: Offen / Wartet / Erledigt / Archiviert)
+- Leverage (select: Hoch / Mittel / Niedrig)
+- Deadline (date, optional)
+- Kunde (select from clients, optional)
+- Auftrag (select from projects, optional)
+- Quelle (select: WhatsApp / Email / Meeting / Notion / Eigene / Sonstiges)
+- Owner (select: Ich / Editor / Partner / Extern)
+- Beteiligte (text)
+- Nächste Aktion (text)
+- Notizen (textarea)
+
+---
+
+## STEP 6 — Prompts (CRUD + Copy to Clipboard)
+
+Rewrite `PromptsPage.tsx`:
+
+**Card view (default):**
+- Favorites (star toggle) pinned at top
+- Each card: Titel, Kategorie badge, Tags, truncated prompt preview
+- **Big "Copy" button** → `navigator.clipboard.writeText(prompt.prompt_text)` → toast "Prompt kopiert!"
+- Click card to expand full prompt text (or toggle expand)
+- Search bar filtering by title/tag/category
+
+**Create/Edit modal:**
+- Titel (required)
+- Kategorie (select: Business / Outreach / Content / Coding / Research / Analysis / Sonstiges)
+- Prompt Text (large textarea, this is the main content)
+- Tags (comma-separated text input → stored as text[])
+- Favorit (toggle)
+- Notizen (textarea)
+
+---
+
+## STEP 7 — Remaining Sections
+
+### Services
+- Table with create/edit/delete
+- Fields: Name, Kategorie, Beschreibung, Preis Von, Aufwand, Vor-Ort, Nachbearbeitung, Lieferumfang, Status
+- Filter by Status: Aktiv / Entwurf / Alle
+
+### Content (Social Media Planner)
+- Kanban by status: Idee → In Produktion → Fertig → Geplant → Veröffentlicht
+- Simple monthly calendar grid (just dots on dates that have content planned)
+- Create/edit: Titel, Plattform (multi-checkbox), Format, Status, Geplantes Datum, Hook, Script, Hashtags, Tags
+
+### Partner
+- Table + create/edit/delete modal
+- Fields: Name, Typ, Kontaktperson, Email, Telefon, Services, Status, Revenue Share %, Website, Notizen
+
+### Roadmap
+- Grouped by Phase (Phase 1, Phase 2, Phase 3 as sections with headers)
+- Each goal card: Ziel, Status badge, Kategorie badge, Erfolgsmetrik
+- Create/edit all fields from schema
+
+---
+
+## COMMIT & REPORT
+
+- Commit: `feat(TASK-002): add full CRUD, Kanban views, finance charts`
+- Create `_CLAUDE/REPORTS/REPORT-002.md` listing what was built per section
