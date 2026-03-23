@@ -1,0 +1,154 @@
+{
+  "version": "1.0",
+  "updated": "2026-03-23",
+  "tools": [
+    {
+      "id": "claude-code-manager",
+      "name": "Claude Code Manager",
+      "description": "Manage all Claude Code sessions, projects and CLAUDE.md files",
+      "category": "dev",
+      "launchType": "local-web",
+      "launchScript": "D:\\Tools\\ClaudeCodeManager\\start.bat",
+      "webUrl": "http://localhost:8420",
+      "port": 8420,
+      "icon": "brain",
+      "path": "D:\\Tools\\ClaudeCodeManager",
+      "embeddable": true
+    },
+    {
+      "id": "link-hoarder",
+      "name": "Link Hoarder",
+      "description": "Local social media content library — download, transcribe and summarize links",
+      "category": "ai",
+      "launchType": "local-web",
+      "launchScript": "D:\\Tools\\LinkHoarder\\start.bat",
+      "webUrl": "http://localhost:8777",
+      "port": 8777,
+      "icon": "bookmark",
+      "path": "D:\\Tools\\LinkHoarder",
+      "embeddable": true
+    },
+    {
+      "id": "media-kompressor",
+      "name": "Media Kompressor",
+      "description": "Professional image and video compression with format conversion",
+      "category": "media",
+      "launchType": "local-gui",
+      "launchScript": "D:\\Tools\\MediaKompressor\\start.bat",
+      "webUrl": null,
+      "port": null,
+      "icon": "film",
+      "path": "D:\\Tools\\MediaKompressor",
+      "embeddable": false
+    },
+    {
+      "id": "voice-to-text",
+      "name": "Voice to Text",
+      "description": "Audio transcription via Whisper + Ollama refinement",
+      "category": "ai",
+      "launchType": "local-gui",
+      "launchScript": "D:\\Tools\\Voice_to_Text\\START_APP.bat",
+      "webUrl": null,
+      "port": null,
+      "icon": "mic",
+      "path": "D:\\Tools\\Voice_to_Text",
+      "embeddable": false
+    },
+    {
+      "id": "video-to-transcript",
+      "name": "Video to Transcript",
+      "description": "Convert video files to refined German transcripts",
+      "category": "ai",
+      "launchType": "local-gui",
+      "launchScript": "D:\\Tools\\Video_to_Transcript\\start_gui.bat",
+      "webUrl": null,
+      "port": null,
+      "icon": "video",
+      "path": "D:\\Tools\\Video_to_Transcript",
+      "embeddable": false
+    },
+    {
+      "id": "workspace-launcher",
+      "name": "Workspace Launcher",
+      "description": "PyQt6 system tray workspace switcher (legacy — superseded by Kernel Flow OS)",
+      "category": "productivity",
+      "launchType": "local-gui",
+      "launchScript": "D:\\Tools\\Workspace_Launcher\\start_hub.bat",
+      "webUrl": null,
+      "port": null,
+      "icon": "layout-grid",
+      "path": "D:\\Tools\\Workspace_Launcher",
+      "embeddable": false
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "business",
+      "name": "Kernel Flow Business",
+      "description": "CRM, projects, finance, daily business operations",
+      "icon": "briefcase",
+      "color": "#2563EB",
+      "defaultSection": "/",
+      "launchTools": [],
+      "launchUrls": [],
+      "claudeCodePath": "Z:\\Kernel_Flow_GmbH"
+    },
+    {
+      "id": "video-production",
+      "name": "Video Production",
+      "description": "Media compression, transcription, and video editing workflow",
+      "icon": "video",
+      "color": "#7C3AED",
+      "defaultSection": "/content",
+      "launchTools": ["media-kompressor", "voice-to-text", "video-to-transcript"],
+      "launchUrls": [],
+      "claudeCodePath": null
+    },
+    {
+      "id": "dev",
+      "name": "Development",
+      "description": "Claude Code, project building, tool development",
+      "icon": "code-2",
+      "color": "#10B981",
+      "defaultSection": "/",
+      "launchTools": ["claude-code-manager"],
+      "launchUrls": ["http://localhost:8420"],
+      "claudeCodePath": "D:\\Tools"
+    },
+    {
+      "id": "research",
+      "name": "Research & Content",
+      "description": "Link hoarding, content research, social media planning",
+      "icon": "search",
+      "color": "#F59E0B",
+      "defaultSection": "/content",
+      "launchTools": ["link-hoarder"],
+      "launchUrls": ["http://localhost:8777"],
+      "claudeCodePath": null
+    },
+    {
+      "id": "kernel-flow-os",
+      "name": "Kernel Flow OS Dev",
+      "description": "Building and iterating on this app itself",
+      "icon": "layers",
+      "color": "#EF4444",
+      "defaultSection": "/",
+      "launchTools": ["claude-code-manager"],
+      "launchUrls": [],
+      "claudeCodePath": "C:\\Users\\flori\\Desktop\\Kernel_Kontrolle"
+    }
+  ],
+  "claudeCode": {
+    "command": "claude",
+    "quickPaths": [
+      { "label": "Kernel Flow OS", "path": "C:\\Users\\flori\\Desktop\\Kernel_Kontrolle" },
+      { "label": "Kernel Flow GmbH", "path": "Z:\\Kernel_Flow_GmbH" },
+      { "label": "Tools", "path": "D:\\Tools" },
+      { "label": "ClaudeCodeManager", "path": "D:\\Tools\\ClaudeCodeManager" },
+      { "label": "LinkHoarder", "path": "D:\\Tools\\LinkHoarder" },
+      { "label": "MediaKompressor", "path": "D:\\Tools\\MediaKompressor" },
+      { "label": "Voice_to_Text", "path": "D:\\Tools\\Voice_to_Text" },
+      { "label": "Desktop", "path": "C:\\Users\\flori\\Desktop" }
+    ]
+  }
+}

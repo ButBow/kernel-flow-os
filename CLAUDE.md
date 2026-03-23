@@ -1,6 +1,6 @@
 # CLAUDE.md — Kernel Flow OS Project Instructions
 
-**Project:** Kernel Flow OS (Internal Business Dashboard)
+**Project:** Kernel Flow OS — Personal Operating System & Business Hub
 **Company:** Kernel Flow GmbH | Owner: Floris Kern
 **Orchestrator:** Claude (Anthropic) — reads this repo, writes tasks, reviews code
 **Developer:** Lovable AI — implements tasks, writes reports, commits code
@@ -97,12 +97,17 @@ After every implementation session, Lovable MUST create a report file:
 
 ## PROJECT OVERVIEW
 
-**What:** Private internal dashboard for Kernel Flow GmbH. Replaces Notion.
+**What:** A Personal Operating System for Floris Kern — combining business management, tool launching, workspace switching, and Claude Code integration into one unified web app. Think: Creative Cloud + Notion + Raycast + tmux in a single custom dashboard. Replaces Notion as single source of truth.
+
 **NOT:** The public website (that's kernelflow.ch — separate Lovable project)
+
+**Two Layers:**
+1. **Business OS** — CRM, Projects, Pipeline, Finance, Content, Roadmap (Supabase-backed)
+2. **Personal OS** — Tool Hub, Workspace Clusters, Claude Code Hub, System Info (local launcher-backed)
 
 **Tech Stack:**
 - React + TypeScript + Tailwind CSS
-- Supabase (database + auth)
+- Supabase (database for business data)
 - React Router v6 (navigation)
 - TanStack React Query (async data fetching + caching)
 - Recharts (financial charts)
@@ -110,10 +115,19 @@ After every implementation session, Lovable MUST create a report file:
 - Shadcn/ui (component library)
 - Lucide React (icons)
 
+**Local Backend (Kernel Launcher Service):**
+- Python FastAPI @ http://localhost:8421
+- Bridges between the web app and local tools/Claude Code
+- Source: `launcher/launcher_service.py`
+- Config: `launcher/modules.json`
+- Startup: `START.bat` (git pull → start launcher → open browser)
+
 **Design:** Dark mode only. Colors: #0A0A0A bg, #2563EB primary blue, #7C3AED accent purple.
 
 **App Sections:**
-1. Dashboard (command center)
+
+Business OS:
+1. Dashboard (command center — stats, daily brief, quick actions)
 2. Kunden (CRM)
 3. Aufträge (Projects + Kanban)
 4. Pipeline (Leads)
@@ -124,9 +138,26 @@ After every implementation session, Lovable MUST create a report file:
 9. Prompts (AI Library)
 10. Partner
 11. Roadmap
-12. Settings
+
+Personal OS:
+12. Tools Hub (launch/embed all local tools — modules from `launcher/modules.json`)
+13. Claude Code Hub (launch CC from any dir, browse projects/sessions)
+14. Workspaces (switch between "scenes" — clusters of tools + browser sections)
+15. Settings
+
+**Local Tools (registered as modules):**
+
+| Tool | Type | Port | Embeddable |
+|------|------|------|-----------|
+| Claude Code Manager | FastAPI + PySide6 | 8420 | Yes (iFrame) |
+| Link Hoarder | FastAPI + web UI | 8777 | Yes (iFrame) |
+| Media Kompressor | Python GUI (CustomTkinter) | — | No (launch only) |
+| Voice to Text | Python GUI (Tkinter/Whisper) | — | No (launch only) |
+| Video to Transcript | Python GUI (Whisper) | — | No (launch only) |
+| Workspace Launcher | Python GUI (PyQt6 tray) | — | No (launch only) |
 
 **Full spec:** See `_Lovable_Prompt/KERNEL_FLOW_OS_PROMPT.md`
+**Architecture:** See `_CLAUDE/DECISIONS/ADR-003-personal-os-architecture.md`
 
 ---
 
@@ -139,6 +170,27 @@ See `_CLAUDE/DECISIONS/` for detailed decision logs.
 **ADR-003:** Shadcn/ui as component base — consistent, accessible, customizable
 **ADR-004:** Sonner for toasts — lightweight, matches dark theme well
 **ADR-005:** No auth required (MVP) — this runs locally for one user (Floris)
+**ADR-006:** Kernel Launcher Service at :8421 — bridges web app to local tools via HTTP API
+**ADR-007:** modules.json defines all tools + workspaces — add new tools by editing JSON, no code changes
+**ADR-008:** Web-based tools (ClaudeCodeManager :8420, LinkHoarder :8777) embedded via iFrame panels
+**ADR-009:** Python GUI tools launched via subprocess — status shown as "Running/Stopped/Unknown"
+**ADR-010:** START.bat does git pull on startup — ensures latest Lovable code is always current
+
+## LAUNCHER SERVICE API
+
+The Kernel Flow OS web app talks to `http://localhost:8421` for all local operations.
+
+**Key endpoints the web app uses:**
+- `GET /modules` — returns full modules.json (tool list, workspaces, Claude paths)
+- `GET /modules/status` — returns running/stopped status for all tools
+- `POST /launch/{tool_id}` — launches a local tool (e.g., `/launch/media-kompressor`)
+- `POST /workspace/activate` — activates a workspace (launches all its tools)
+- `POST /claude-code/launch` — opens Claude Code in a directory (body: `{path, model?}`)
+- `GET /claude-code/projects` — lists all Claude Code projects from `~/.claude/projects/`
+- `GET /claude-code/quick-paths` — returns bookmarked directories for quick CC launch
+- `GET /files/browse?path=...` — directory browser for the Claude Code launcher
+- `POST /git/pull` — pulls latest changes from GitHub
+- `GET /system/info` — CPU/RAM stats for the dashboard
 
 ---
 

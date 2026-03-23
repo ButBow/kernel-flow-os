@@ -13,9 +13,11 @@
 
 ## YOUR JOB RIGHT NOW
 
-Build the foundation of "Kernel Flow OS" — a private internal business dashboard for Kernel Flow GmbH (Swiss AI & Content agency, owner Floris Kern).
+Build the foundation of "Kernel Flow OS" — a **Personal Operating System** for Floris Kern / Kernel Flow GmbH. This is more than a dashboard: it's a unified hub for business management, local tool launching, workspace switching, and Claude Code integration.
 
 This is an internal tool, NOT the public website. Full spec: `_Lovable_Prompt/KERNEL_FLOW_OS_PROMPT.md`
+
+**IMPORTANT: There is a local Python service running on http://localhost:8421 (Kernel Launcher Service).** The web app must talk to this service for local operations (launching tools, checking status, browsing files, launching Claude Code). Details are in CLAUDE.md under "LAUNCHER SERVICE API".
 
 ---
 
@@ -305,6 +307,9 @@ Create `src/components/layout/Layout.tsx` — the persistent shell:
 - Sidebar contains: logo, nav items, bottom company info
 
 Create `src/components/layout/Sidebar.tsx`:
+- **Two sections in sidebar, separated by a divider line:**
+  - Top: "Business" label, then: Dashboard, Kunden, Aufträge, Pipeline, Services, Content, Finanzen, Open Loops, Prompts, Partner, Roadmap
+  - Bottom: "System" label, then: Tools Hub, Claude Code, Workspaces, Settings
 - Nav items with icons (Lucide), label, active state
 - Active = bg surface2 + left border primary + text white
 - Inactive = text muted, hover bg surface2
@@ -350,7 +355,153 @@ export default function Kunden() {
   )
 }
 ```
-Do this for: Kunden, Aufträge, Pipeline, Services, Content, Finanzen, Open Loops, Prompts, Partner, Roadmap, Settings.
+Do this for: Kunden, Aufträge, Pipeline, Services, Content, Finanzen, Open Loops, Prompts, Partner, Roadmap, Settings, ToolsHub, ClaudeCodeHub, Workspaces.
+
+---
+
+## STEP 7b — Tools Hub Page (Basic but Functional)
+
+**Route:** `/tools`
+
+This is NOT a stub — build this page with real functionality.
+
+The Tools Hub talks to the **Kernel Launcher Service** at `http://localhost:8421`.
+
+Create a helper `src/services/launcher.ts`:
+```ts
+const LAUNCHER_URL = 'http://localhost:8421'
+
+export async function getModules() {
+  const res = await fetch(`${LAUNCHER_URL}/modules`)
+  return res.json()
+}
+
+export async function getModulesStatus() {
+  const res = await fetch(`${LAUNCHER_URL}/modules/status`)
+  return res.json()
+}
+
+export async function launchTool(toolId: string) {
+  const res = await fetch(`${LAUNCHER_URL}/launch/${toolId}`, { method: 'POST' })
+  return res.json()
+}
+
+export async function getSystemInfo() {
+  const res = await fetch(`${LAUNCHER_URL}/system/info`)
+  return res.json()
+}
+
+export async function launcherHealthCheck() {
+  try {
+    const res = await fetch(`${LAUNCHER_URL}/health`)
+    return res.ok
+  } catch {
+    return false
+  }
+}
+```
+
+**ToolsHub page layout:**
+
+1. **Header bar:** "Tools Hub" title + Launcher status indicator:
+   - Green dot + "Launcher Connected" if `/health` returns ok
+   - Red dot + "Launcher Offline — run START.bat" if fetch fails
+
+2. **Tool Cards Grid** (2-3 columns):
+   - Fetch tools from `GET /modules` → tools array
+   - Each card shows:
+     - Icon (from Lucide, mapped by tool's `icon` field)
+     - Tool name + description
+     - Status badge: 🟢 Running / 🔴 Stopped / ⚪ Unknown (from `/modules/status`)
+     - [Launch] button → calls `POST /launch/{tool_id}`
+     - If tool has `webUrl` and `embeddable: true`: [Open in Panel] button → navigates to iFrame view
+   - Category grouping (dev / ai / media / productivity)
+
+3. **Embedded Panel** (for web-based tools):
+   - When user clicks "Open in Panel" on an embeddable tool (ClaudeCodeManager, LinkHoarder)
+   - Shows a full-width iFrame below the cards grid loading the tool's `webUrl`
+   - Close button to dismiss the iFrame panel
+
+4. **System Info** (small section at bottom):
+   - CPU usage bar + RAM usage bar (from `GET /system/info`)
+   - Auto-refresh every 10 seconds
+
+Handle the "launcher offline" case gracefully:
+- If `localhost:8421` is unreachable, show ALL tool cards in "Unknown" status
+- Show a prominent banner: "Kernel Launcher Service is offline. Run START.bat to connect local tools."
+- The rest of the app (business sections) works fine without the launcher
+
+---
+
+## STEP 7c — Claude Code Hub Page (Basic but Functional)
+
+**Route:** `/claude-code`
+
+Create `src/services/claudeCode.ts`:
+```ts
+const LAUNCHER_URL = 'http://localhost:8421'
+
+export async function getClaudeProjects() {
+  const res = await fetch(`${LAUNCHER_URL}/claude-code/projects`)
+  return res.json()
+}
+
+export async function getQuickPaths() {
+  const res = await fetch(`${LAUNCHER_URL}/claude-code/quick-paths`)
+  return res.json()
+}
+
+export async function launchClaudeCode(path: string, model?: string) {
+  const res = await fetch(`${LAUNCHER_URL}/claude-code/launch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, model })
+  })
+  return res.json()
+}
+
+export async function browseDirectory(path: string) {
+  const res = await fetch(`${LAUNCHER_URL}/files/browse?path=${encodeURIComponent(path)}`)
+  return res.json()
+}
+```
+
+**ClaudeCode Hub page layout:**
+
+1. **Quick Launch** (top section):
+   - Row of buttons for bookmarked paths (from `/claude-code/quick-paths`)
+   - Each button: path label + "Open Claude Code" action
+   - Clicking calls `POST /claude-code/launch` with that path
+   - Toast notification: "Claude Code launched in [path]"
+
+2. **Directory Browser** (middle):
+   - Starts at `C:\Users\flori`
+   - Shows folder list (from `GET /files/browse?path=...`)
+   - Each folder: name, click to navigate deeper, "has CLAUDE.md" indicator (dot)
+   - Breadcrumb navigation at top
+   - "Open Claude Code Here" button per folder row
+
+3. **Recent Projects** (bottom section):
+   - Table from `GET /claude-code/projects`
+   - Columns: Project Name, Path, Sessions count
+   - "Open" button per row → launches CC in that path
+   - Sorted by name
+
+Handle launcher offline: show "Launcher offline" banner, quick-launch buttons disabled.
+
+---
+
+## STEP 7d — Workspaces Page (Stub with Structure)
+
+**Route:** `/workspaces`
+
+This can be simpler for now:
+- Read workspace configs from `GET /modules` → `workspaces` array
+- Show workspace cards:
+  - Name, description, color indicator, icon
+  - List of tools that will launch
+  - [Activate] button → calls `POST /workspace/activate` with workspace_id
+  - Toast: "Workspace [name] activated — launching X tools"
 
 ---
 
